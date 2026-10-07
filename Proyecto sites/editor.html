@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Infraestructura - Vidanta</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --dark-bg: #1e272e; --accent: #0984e3; }
+        body { background-color: #f1f3f6; font-family: 'Segoe UI', sans-serif; }
+
+        .sidebar { background: var(--dark-bg); color: white; min-height: 100vh; position: fixed; width: 240px; padding: 20px 14px; z-index: 1000; overflow-y: auto; }
+        .sidebar .brand { font-size: 1.05rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .nav-btn { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: transparent; border: none; color: #b2bec3; padding: 7px 10px; border-radius: 8px; font-size: 0.84rem; cursor: pointer; transition: 0.15s; margin-bottom: 2px; }
+        .nav-btn:hover, .nav-btn.active { background: rgba(255,255,255,0.1); color: white; }
+        .nav-btn i { font-size: 0.95rem; width: 16px; text-align: center; opacity: 0.85; }
+        .nav-btn .badge { margin-left: auto; }
+        .nav-label { font-size: 0.62rem; color: #636e72; text-transform: uppercase; letter-spacing: 1px; margin: 12px 0 5px; }
+
+        .main-content { margin-left: 240px; padding: 28px 34px; }
+
+        .card-site { background: white; border-radius: 12px; border: 2px solid transparent; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
+        .card-site:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+
+        .edit-input { border: 1px solid #dee2e6; border-radius: 6px; padding: 5px 9px; width: 100%; font-size: 0.85rem; transition: .15s; }
+        .edit-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(9,132,227,.15); }
+        label { font-weight: 600; font-size: 0.68rem; color: #636e72; text-transform: uppercase; display: block; margin-top: 8px; margin-bottom: 3px; }
+
+        .section-header { background: #f8f9fa; padding: 10px 14px; border-radius: 8px; border-left: 4px solid var(--accent); margin: 18px 0 10px; display: flex; justify-content: space-between; align-items: center; }
+        .section-header.sw { border-left-color: #6c5ce7; }
+        .section-header span i { margin-right: 7px; color: var(--accent); }
+        .section-header.sw span i { color: #6c5ce7; }
+
+        /* Type indicator in table */
+        .type-dot-hab  { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #00b894; margin-right: 5px; }
+        .type-dot-area { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #0984e3; margin-right: 5px; }
+        .ext-preview-hab  { color: #7d6608; font-weight: 700; font-size: 0.78rem; }
+        .ext-preview-area { color: #1a6fb0; font-weight: 700; font-size: 0.78rem; }
+
+        .mini-pill { display: inline-flex; align-items: center; gap: 3px; border-radius: 20px; padding: 1px 8px; font-size: 0.71rem; border: 1px solid; }
+        .mini-pill.hab  { border-color: #f9ca24; color: #7d6608; background: #fefde7; }
+        .mini-pill.area { border-color: #74b9ff; color: #1a6fb0; background: #eaf4ff; }
+
+        .legend-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.78rem; }
+
+        .table-edit input { border: 1px solid #eee; border-radius: 4px; padding: 3px 6px; width: 100%; font-size: 0.82rem; transition: .15s; }
+        .table-edit input:focus { border-color: var(--accent); outline: none; }
+
+        .btn-export { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--accent); color: white; border: none; border-radius: 8px; padding: 10px; font-weight: 600; font-size: 0.84rem; width: 100%; cursor: pointer; transition: .2s; }
+        .btn-export:hover { background: #0871c4; }
+
+        .upload-box { border: 1.5px dashed #dee2e6; border-radius: 8px; padding: 10px 12px; background: #fafbfc; }
+        .upload-box:hover { border-color: var(--accent); }
+    </style>
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="brand"><i class="bi bi-pencil-square"></i> Editor de Datos</div>
+    <div class="nav-label">Navegación</div>
+    <a href="index.html" class="nav-btn" style="text-decoration:none"><i class="bi bi-arrow-left"></i> Volver al visor</a>
+    <div id="btnContainer">
+        <button class="nav-btn active" onclick="renderAll(this)"><i class="bi bi-globe2"></i> Ver Todos</button>
+    </div>
+    <div class="nav-label" style="margin-top:20px">Agregar</div>
+    <button class="nav-btn" onclick="openNewSiteModal()"><i class="bi bi-plus-circle"></i> Nuevo Site</button>
+    <button class="nav-btn" onclick="openNewTorreModal()"><i class="bi bi-building-add"></i> Nuevo Hotel / Torre</button>
+    <div class="nav-label" style="margin-top:20px">Exportar</div>
+    <button class="btn-export mt-2" onclick="exportarJS()"><i class="bi bi-download"></i> Exportar datos.js</button>
+    <div class="mt-2 text-muted" style="font-size:0.7rem;padding:0 4px">Descarga el archivo actualizado para reemplazar tu datos.js.</div>
+</div>
+
+<div class="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold mb-1">Editor de Infraestructura</h2>
+            <p class="text-muted small mb-0">Haz click en un site para editar sus datos y switches.</p>
+        </div>
+        <input type="text" class="form-control" style="max-width:260px" placeholder="Buscar site..." oninput="search(this.value)">
+    </div>
+
+    <!-- Legend -->
+    <div class="legend-box d-flex gap-4 flex-wrap align-items-center">
+        <strong style="font-size:0.78rem">Clasificación automática de extensiones:</strong>
+        <span><span class="type-dot-hab"></span> <b>Habitación:</b> 1XXXX, 72XXX, 76XXX, 30XXX, 33XXX</span>
+        <span><span class="type-dot-area"></span> <b>Área/Admin:</b> cualquier otro prefijo (64XXX, 65XXX…)</span>
+    </div>
+
+    <div class="row g-3" id="sitesContainer"></div>
+</div>
+
+<!-- MODAL SITE EDITOR -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="editModalTitle">Editor de Site</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DEVICE EDITOR -->
+<div class="modal fade" id="deviceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="deviceModalTitle"><i class="bi bi-hdd-network me-2"></i>Dispositivos del Switch</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="deviceModalBody"></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL NUEVO SITE (elegir hotel, forzado a lista) -->
+<div class="modal fade" id="newSiteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Nuevo Site</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label>Hotel / grupo al que pertenece</label>
+                <select class="edit-input" id="newSiteGroupSelect" onchange="toggleNewGroupInput()"></select>
+                <div id="newGroupInputWrap" class="mt-2" style="display:none">
+                    <label>Nombre del nuevo hotel</label>
+                    <input type="text" class="edit-input" id="newGroupNameInput" placeholder="Ej. Riviera">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary btn-sm" onclick="confirmNewSite()"><i class="bi bi-check-lg me-1"></i>Crear site</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL NUEVO HOTEL / TORRE -->
+<div class="modal fade" id="newTorreModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-building-add me-2"></i>Nuevo Hotel / Torre</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label>Nombre del hotel / grupo</label>
+                <input type="text" class="edit-input" id="newTorreNameInput" placeholder="Ej. Riviera">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary btn-sm" onclick="confirmNewTorre()"><i class="bi bi-check-lg me-1"></i>Crear hotel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="datos.js"></script>
+<script>
+/* Respaldo: si no existe datos.js, intenta con datos_.js (nombre alterno) */
+if (typeof dataSites === 'undefined') {
+    document.write('<script src="datos_.js"><\/script>');
+}
+</script>
+<script>
+
+// ── ERROR VISIBLE (en vez de dejar la pantalla en blanco) ─────────────────
+function mostrarErrorDatos(titulo, detalle, contenedorId) {
+    const c = document.getElementById(contenedorId);
+    if (!c) return;
+    c.innerHTML = `<div class="col-12"><div class="alert alert-danger mb-0">
+        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>${titulo}</h5>
+        <div>${detalle}</div></div></div>`;
+}
+const MSG_NO_DATOS = 'No se cargó la variable <code>dataSites</code>. Verifica que el archivo <code>datos.js</code> ' +
+    'esté <b>en la misma carpeta</b> que este HTML y que se llame exactamente <code>datos.js</code> ' +
+    '(sin guion bajo, sin “(1)”). Presiona Ctrl+F5 después de corregirlo.';
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function isHabitacion(ext) {
+    if (!ext) return false;
+    const s = String(parseInt(ext));
+    if (s.length !== 5) return false;
+    return s[0]==='1' || ['72','76','30','33'].includes(s.slice(0,2));
+}
+function tipoTel(ext) { return isHabitacion(ext) ? 'habitacion' : 'area'; }
+function classify(ext) {
+    if (!ext) return '';
+    return isHabitacion(ext)
+        ? `<span class="mini-pill hab"><i class="bi bi-door-closed"></i> Hab</span>`
+        : `<span class="mini-pill area"><i class="bi bi-building"></i> Área</span>`;
+}
+
+// ── TIPOS DE SITE (MDF / IDF / Cubo / Vertical) ─────────────────────────────
+const TIPOS_SITE = [
+    { key: 'MDF',      label: 'MDF',               color: '#d63031' },
+    { key: 'IDF',      label: 'IDF',               color: '#0984e3' },
+    { key: 'Cubo',     label: 'Cubo de habitación', color: '#00b894' },
+    { key: 'Vertical', label: 'Vertical',           color: '#6c5ce7' }
+];
+function tipoInfo(tipo) {
+    return TIPOS_SITE.find(t => t.key === tipo) || { key: tipo, label: tipo || 'IDF', color: '#b2bec3' };
+}
+function tipoDe(site) { return site['Tipo de site'] || 'IDF'; }
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let allData = [];
+let currentPath = {};
+const editModal   = new bootstrap.Modal(document.getElementById('editModal'));
+const deviceModal = new bootstrap.Modal(document.getElementById('deviceModal'));
+
+function init() {
+    rebuildSidebar();
+    recomputeAllData();
+    render(allData);
+}
+
+// ── SIDEBAR / DATA REBUILD (usado también al crear sites/hoteles) ──────────
+function rebuildSidebar() {
+    const container = document.getElementById('btnContainer');
+    container.innerHTML = '<button class="nav-btn" onclick="renderAll(this)"><i class="bi bi-globe2"></i> Ver Todos</button>';
+    Object.keys(dataSites).forEach(grupo => {
+        const btn = document.createElement('button');
+        btn.className = 'nav-btn';
+        btn.innerHTML = `<i class="bi bi-building"></i> ${esc(grupo)} <span class="badge bg-secondary">${dataSites[grupo].length}</span>`;
+        btn.onclick = e => { filterBy(grupo, e.target.closest('button')); };
+        container.appendChild(btn);
+    });
+}
+function recomputeAllData() {
+    allData = [];
+    Object.keys(dataSites).forEach(grupo => {
+        dataSites[grupo].forEach((site, idx) => {
+            site._grupo = grupo; site._index = idx;
+            allData.push(site);
+        });
+    });
+}
+
+// ── CREAR SITE / HOTEL NUEVOS (modal, no prompt) ────────────────────────────
+const newSiteModal  = new bootstrap.Modal(document.getElementById('newSiteModal'));
+const newTorreModal = new bootstrap.Modal(document.getElementById('newTorreModal'));
+
+function openNewSiteModal() {
+    const sel = document.getElementById('newSiteGroupSelect');
+    sel.innerHTML = Object.keys(dataSites).map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join('')
+        + `<option value="__nuevo__">+ Crear nuevo hotel...</option>`;
+    sel.value = Object.keys(dataSites)[0] || '__nuevo__';
+    toggleNewGroupInput();
+    document.getElementById('newGroupNameInput').value = '';
+    newSiteModal.show();
+}
+function toggleNewGroupInput() {
+    const esNuevo = document.getElementById('newSiteGroupSelect').value === '__nuevo__';
+    document.getElementById('newGroupInputWrap').style.display = esNuevo ? 'block' : 'none';
+}
+function confirmNewSite() {
+    let grupo = document.getElementById('newSiteGroupSelect').value;
+    if (grupo === '__nuevo__') {
+        grupo = document.getElementById('newGroupNameInput').value.trim();
+        if (!grupo) { alert('Escribe el nombre del nuevo hotel.'); return; }
+        if (dataSites[grupo]) { alert('Ese hotel ya existe, selecciónalo de la lista.'); return; }
+        dataSites[grupo] = [];
+    }
+    dataSites[grupo].push({
+        Nombre: 'Nuevo Site',
+        Imagen: 'site-imagen.jpg',
+        Torre: '',
+        'Piso / Nivel': '',
+        'Tipo de site': 'IDF',
+        'Ubicación exacta': '',
+        'Tipo de llave': '',
+        'Equipos principales': '',
+        Comentarios: '',
+        switches: [],
+        EquiposDetalle: []
+    });
+    const idx = dataSites[grupo].length - 1;
+
+    rebuildSidebar();
+    recomputeAllData();
+    render(allData);
+    newSiteModal.hide();
+    openSiteEditor(grupo, idx);
+}
+
+function openNewTorreModal() {
+    document.getElementById('newTorreNameInput').value = '';
+    newTorreModal.show();
+}
+function confirmNewTorre() {
+    const nombre = document.getElementById('newTorreNameInput').value.trim();
+    if (!nombre) return;
+    if (dataSites[nombre]) { alert('Ese hotel/grupo ya existe.'); return; }
+    dataSites[nombre] = [];
+    rebuildSidebar();
+    recomputeAllData();
+    render(allData);
+    newTorreModal.hide();
+}
+
+// ── RENDER CARDS ───────────────────────────────────────────────────────────
+function render(data) {
+    const c = document.getElementById('sitesContainer');
+    c.innerHTML = '';
+    data.forEach(site => {
+        const allDevs = (site.switches||[]).flatMap(sw=>sw.dispositivos||[]);
+        const habN  = allDevs.filter(d=>(d.tipo_telefono||tipoTel(d.extension))==='habitacion').length;
+        const areaN = allDevs.filter(d=>(d.tipo_telefono||tipoTel(d.extension))==='area').length;
+        const swN   = (site.switches||[]).length;
+
+        const info = tipoInfo(tipoDe(site));
+        const col = document.createElement('div');
+        col.className = 'col-md-4';
+        col.innerHTML = `
+        <div class="card card-site p-0">
+            <div style="height:3px;background:${info.color}"></div>
+            <div class="p-3">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <div class="fw-bold text-primary">${site.Nombre}</div>
+                    <span class="mini-pill" style="border-color:${info.color};color:${info.color}">${info.label}</span>
+                </div>
+                <div class="small text-muted mb-2"><i class="bi bi-geo-alt"></i> ${site.Torre||site._grupo} · Piso ${site["Piso / Nivel"]||'–'}</div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="mini-pill" style="border-color:#ccc;color:#636e72"><i class="bi bi-diagram-3"></i> ${swN} SW</span>
+                    ${habN  ? `<span class="mini-pill hab"><i class="bi bi-door-closed"></i> ${habN} hab.</span>`  : ''}
+                    ${areaN ? `<span class="mini-pill area"><i class="bi bi-building"></i> ${areaN} área</span>` : ''}
+                </div>
+            </div>
+        </div>`;
+        col.querySelector('.card-site').addEventListener('click', () => openSiteEditor(site._grupo, site._index));
+        c.appendChild(col);
+    });
+}
+
+// ── SITE EDITOR ────────────────────────────────────────────────────────────
+function openSiteEditor(grupo, idx) {
+    const site = dataSites[grupo][idx];
+    if (!site.switches)      site.switches      = [];
+    if (!site.EquiposDetalle) site.EquiposDetalle = [];
+
+    document.getElementById('editModalTitle').innerText = `Editor: ${site.Nombre}`;
+
+    let html = `
+    <div class="row g-3 mb-2">
+        <div class="col-md-6"><label>Nombre del site</label>
+            <input type="text" class="edit-input" value="${esc(site.Nombre)}"
+                   oninput="dataSites['${grupo}'][${idx}].Nombre=this.value;document.getElementById('editModalTitle').innerText='Editor: '+this.value"></div>
+        <div class="col-md-3"><label>Torre</label>
+            <input type="text" class="edit-input" value="${esc(site.Torre||'')}" oninput="dataSites['${grupo}'][${idx}].Torre=this.value"></div>
+        <div class="col-md-3"><label>Piso / Nivel</label>
+            <input type="text" class="edit-input" value="${esc(String(site['Piso / Nivel']||''))}" oninput="dataSites['${grupo}'][${idx}]['Piso / Nivel']=this.value"></div>
+        <div class="col-md-6"><label>Ubicación exacta</label>
+            <input type="text" class="edit-input" value="${esc(site['Ubicación exacta']||'')}" oninput="dataSites['${grupo}'][${idx}]['Ubicación exacta']=this.value"></div>
+        <div class="col-md-3"><label>Tipo de llave</label>
+            <input type="text" class="edit-input" value="${esc(site['Tipo de llave']||'')}" oninput="dataSites['${grupo}'][${idx}]['Tipo de llave']=this.value"></div>
+        <div class="col-md-3"><label>Tipo de site</label>
+            <select class="edit-input" onchange="dataSites['${grupo}'][${idx}]['Tipo de site']=this.value">
+                ${TIPOS_SITE.map(t => `<option value="${t.key}" ${tipoDe(site)===t.key?'selected':''}>${t.label}</option>`).join('')}
+            </select></div>
+        <div class="col-md-6"><label>Imagen del site</label>
+            <div class="d-flex gap-2">
+                <input type="text" class="edit-input" id="imgNameInput" value="${esc(site.Imagen||'')}"
+                       oninput="dataSites['${grupo}'][${idx}].Imagen=this.value">
+                <input type="file" accept="image/*" style="display:none" id="imgFileInput" onchange="handleImageUpload(event,'${grupo}',${idx})">
+                <button type="button" class="btn btn-sm btn-outline-secondary" style="white-space:nowrap" onclick="document.getElementById('imgFileInput').click()"><i class="bi bi-upload me-1"></i>Elegir</button>
+            </div>
+            <div id="imgPreviewWrap" class="mt-2">
+                ${site.Imagen ? `<div class="small text-muted">Archivo esperado: <code>img-sites/${esc(site.Imagen)}</code></div>` : ''}
+            </div>
+        </div>
+        <div class="col-12"><label>Comentarios</label>
+            <input type="text" class="edit-input" value="${esc(site.Comentarios||'')}" oninput="dataSites['${grupo}'][${idx}].Comentarios=this.value"></div>
+    </div>
+
+    <div class="section-header sw">
+        <span class="fw-semibold"><i class="bi bi-diagram-3"></i>Switches / Módulos</span>
+        <button class="btn btn-sm btn-primary" onclick="addSwitch('${grupo}',${idx})"><i class="bi bi-plus-lg me-1"></i>Agregar Switch</button>
+    </div>
+    <div class="table-responsive">
+    <table class="table table-sm table-edit align-middle">
+        <thead class="table-dark"><tr><th>IP Switch</th><th>Prefijo Módulo</th><th style="width:90px">Habitación</th><th style="width:80px">Área/Admin</th><th>Dispositivos</th><th></th></tr></thead>
+        <tbody>`;
+
+    site.switches.forEach((sw, swIdx) => {
+        const devs  = sw.dispositivos || [];
+        const habN  = devs.filter(d=>(d.tipo_telefono||tipoTel(d.extension))==='habitacion').length;
+        const areaN = devs.filter(d=>(d.tipo_telefono||tipoTel(d.extension))==='area').length;
+        html += `<tr>
+            <td><input type="text" value="${esc(sw.ip||'')}" oninput="dataSites['${grupo}'][${idx}].switches[${swIdx}].ip=this.value" placeholder="10.x.x.x"></td>
+            <td><input type="text" value="${esc(sw.prefijo_puerto||'0')}" oninput="dataSites['${grupo}'][${idx}].switches[${swIdx}].prefijo_puerto=this.value" style="width:70px"></td>
+            <td class="text-center"><span class="mini-pill hab"><i class="bi bi-door-closed"></i> ${habN}</span></td>
+            <td class="text-center">${areaN?`<span class="mini-pill area"><i class="bi bi-building"></i> ${areaN}</span>`:'<span class="text-muted small">–</span>'}</td>
+            <td><button class="btn btn-sm btn-outline-primary" onclick="openDeviceEditor('${grupo}',${idx},${swIdx})">
+                Ver / Editar (${devs.length})
+            </button></td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="removeSwitch('${grupo}',${idx},${swIdx})">×</button></td>
+        </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    document.getElementById('modalBody').innerHTML = html;
+    editModal.show();
+}
+
+// ── DEVICE EDITOR ──────────────────────────────────────────────────────────
+function openDeviceEditor(grupo, sIdx, swIdx) {
+    currentPath = { grupo, sIdx, swIdx };
+    const sw = dataSites[grupo][sIdx].switches[swIdx];
+    if (!sw.dispositivos) sw.dispositivos = [];
+
+    document.getElementById('deviceModalTitle').innerText = `Dispositivos — Switch ${sw.ip} (Módulo ${sw.prefijo_puerto}/x)`;
+
+    const habN  = sw.dispositivos.filter(d=>(d.tipo_telefono||tipoTel(d.extension))==='habitacion').length;
+    const areaN = sw.dispositivos.filter(d=>(d.tipo_telefono||tipoTel(d.extension))==='area').length;
+
+    let html = `
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="d-flex gap-2">
+            <span class="mini-pill hab"><i class="bi bi-door-closed"></i> ${habN} habitación</span>
+            ${areaN ? `<span class="mini-pill area"><i class="bi bi-building"></i> ${areaN} área/admin</span>` : ''}
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="addDevice()"><i class="bi bi-plus-lg me-1"></i>Agregar dispositivo</button>
+    </div>
+    <div class="legend-box small">
+        La columna <b>Tipo</b> se clasifica automáticamente según la extensión. Puedes forzar el tipo manualmente si lo necesitas.
+    </div>
+    <div class="table-responsive">
+    <table class="table table-sm table-bordered table-edit align-middle">
+        <thead class="table-dark"><tr>
+            <th>Tipo auto</th><th>Tipo manual</th><th>Piso</th><th>Extensión</th><th>Modelo</th><th>Serie</th><th>Puerto SW</th><th>MAC Avaya</th><th>MAC Cisco</th><th></th>
+        </tr></thead>
+        <tbody id="deviceBody">`;
+
+    sw.dispositivos.forEach((d, dIdx) => {
+        const autoTipo = tipoTel(d.extension);
+        const manualTipo = d.tipo_telefono || autoTipo;
+        html += `<tr>
+            <td class="text-center">${classify(d.extension)}</td>
+            <td>
+                <select class="edit-input" style="font-size:0.78rem" onchange="updateDev(${dIdx},'tipo_telefono',this.value)">
+                    <option value="habitacion" ${manualTipo==='habitacion'?'selected':''}>Hab</option>
+                    <option value="area"       ${manualTipo==='area'?'selected':''}>Área</option>
+                </select>
+            </td>
+            <td><input type="text"   value="${esc(d.piso||'')}"        oninput="updateDev(${dIdx},'piso',this.value)"       placeholder="Piso 1"></td>
+            <td><input type="number" value="${d.extension||''}"        oninput="updateDevExt(${dIdx},this.value)"           placeholder="Ext." style="width:80px"></td>
+            <td><input type="text"   value="${esc(d.modelo||'')}"      oninput="updateDev(${dIdx},'modelo',this.value)"     placeholder="H249" style="width:80px"></td>
+            <td><input type="text"   value="${esc(d.serie||'')}"       oninput="updateDev(${dIdx},'serie',this.value)"      placeholder="Serie" style="width:135px"></td>
+            <td><input type="text"   value="${esc(d.puerto||'')}"      oninput="updateDev(${dIdx},'puerto',this.value)"     placeholder="0/1" style="width:70px"></td>
+            <td><input type="text"   value="${esc(d.mac_avaya||'')}"   oninput="updateDev(${dIdx},'mac_avaya',this.value)"  placeholder="MAC Avaya" style="width:130px"></td>
+            <td><input type="text"   value="${esc(d.mac_cisco||'')}"   oninput="updateDev(${dIdx},'mac_cisco',this.value)"  placeholder="MAC Cisco" style="width:130px"></td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="removeDevice(${dIdx})">×</button></td>
+        </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    document.getElementById('deviceModalBody').innerHTML = html;
+    deviceModal.show();
+}
+
+// ── IMAGEN (preview local + nombre de archivo) ──────────────────────────────
+function handleImageUpload(e, grupo, idx) {
+    const file = e.target.files[0];
+    if (!file) return;
+    dataSites[grupo][idx].Imagen = file.name;
+    document.getElementById('imgNameInput').value = file.name;
+    const url = URL.createObjectURL(file);
+    document.getElementById('imgPreviewWrap').innerHTML = `
+        <div class="p-2 border rounded" style="background:#fff">
+            <img src="${url}" style="max-width:100%;max-height:180px;display:block;margin:0 auto 8px;border-radius:6px" alt="preview">
+            <div class="small text-muted text-center">
+                Copia este archivo a <code>img-sites/${esc(file.name)}</code> para que aparezca en el visor.
+            </div>
+        </div>`;
+}
+
+// ── MUTATIONS ──────────────────────────────────────────────────────────────
+function updateDev(dIdx, field, val) {
+    const { grupo, sIdx, swIdx } = currentPath;
+    dataSites[grupo][sIdx].switches[swIdx].dispositivos[dIdx][field] = val;
+}
+function updateDevExt(dIdx, val) {
+    const { grupo, sIdx, swIdx } = currentPath;
+    const d = dataSites[grupo][sIdx].switches[swIdx].dispositivos[dIdx];
+    d.extension = val ? parseInt(val) : null;
+    // Auto-update tipo if not manually overridden or was auto before
+    d.tipo_telefono = tipoTel(d.extension);
+    // Refresh auto-tipo cell
+    const rows = document.getElementById('deviceBody')?.querySelectorAll('tr');
+    if (rows && rows[dIdx]) {
+        rows[dIdx].querySelector('td:first-child').innerHTML = classify(d.extension);
+        rows[dIdx].querySelector('select').value = d.tipo_telefono;
+    }
+}
+function addSwitch(grupo, idx) {
+    dataSites[grupo][idx].switches.push({ ip: '', prefijo_puerto: '0', dispositivos: [] });
+    openSiteEditor(grupo, idx);
+}
+function removeSwitch(grupo, idx, swIdx) {
+    if (confirm('¿Eliminar este switch y todos sus dispositivos?')) {
+        dataSites[grupo][idx].switches.splice(swIdx, 1);
+        openSiteEditor(grupo, idx);
+    }
+}
+function addDevice() {
+    const { grupo, sIdx, swIdx } = currentPath;
+    dataSites[grupo][sIdx].switches[swIdx].dispositivos.push({ piso:'', extension:null, puerto:'', mac_avaya:'', tipo_telefono:'habitacion' });
+    openDeviceEditor(grupo, sIdx, swIdx);
+}
+function removeDevice(dIdx) {
+    const { grupo, sIdx, swIdx } = currentPath;
+    dataSites[grupo][sIdx].switches[swIdx].dispositivos.splice(dIdx, 1);
+    openDeviceEditor(grupo, sIdx, swIdx);
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────────
+function exportarJS() {
+    const backup = JSON.parse(JSON.stringify(dataSites));
+    Object.keys(backup).forEach(g => backup[g].forEach(s => { delete s._grupo; delete s._index; }));
+    const content = `const dataSites = ${JSON.stringify(backup, null, 2)};\n`;
+    const blob = new Blob([content], { type: 'text/javascript' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'datos.js' });
+    a.click();
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function filterBy(grupo, btn) { render(dataSites[grupo]||[]); setActive(btn); }
+function renderAll(btn) { render(allData); setActive(btn); }
+function setActive(btn) { document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+function search(q) { render(allData.filter(s=>JSON.stringify(s).toLowerCase().includes(q.toLowerCase()))); }
+
+if (typeof dataSites === 'undefined') {
+    mostrarErrorDatos('No se pudieron cargar los datos', MSG_NO_DATOS, 'sitesContainer');
+} else {
+    try { init(); }
+    catch (err) {
+        console.error(err);
+        mostrarErrorDatos('Error al iniciar el editor', 'Detalle: <code>' + esc(err.message) + '</code>', 'sitesContainer');
+    }
+}
+</script>
+</body>
+</html>

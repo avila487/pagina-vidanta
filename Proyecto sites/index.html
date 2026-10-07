@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Infraestructura - Vidanta</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --dark-bg: #1e272e; --accent: #0984e3; --accent2: #00b894; --purple: #6c5ce7; }
+        body { background-color: #f1f3f6; font-family: 'Segoe UI', sans-serif; }
+
+        /* Estilos Sidebar */
+        .sidebar {
+            background: var(--dark-bg); color: white; min-height: 100vh;
+            position: fixed; width: 240px; padding: 20px 14px; z-index: 1000; overflow-y: auto;
+        }
+        .sidebar .brand { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; }
+        .sidebar .version { font-size: 0.7rem; color: #636e72; margin-bottom: 18px; }
+        .nav-label { font-size: 0.65rem; color: #636e72; text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 6px; }
+        .nav-btn {
+            display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: transparent;
+            border: none; color: #b2bec3; padding: 7px 10px; border-radius: 8px;
+            font-size: 0.85rem; cursor: pointer; transition: 0.15s; margin-bottom: 2px;
+        }
+        .nav-btn i { font-size: 0.95rem; width: 16px; text-align: center; opacity: 0.85; }
+        .nav-btn .badge { margin-left: auto; }
+        .nav-btn:hover, .nav-btn.active { background: rgba(255,255,255,0.1); color: white; }
+
+        /* Contenido Principal */
+        .main-content { margin-left: 240px; padding: 30px 36px; }
+
+        /* Card Site */
+        .card-site {
+            cursor: pointer; transition: 0.2s; border: none; border-radius: 14px; background: white;
+            overflow: hidden; 
+        }
+        .card-site:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+        
+        /* Estilos para la imagen del Site en el Modal */
+        .img-container-site {
+            width: 100%;
+            height: 400px;
+            background-color: #2d3436; 
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .img-container-site img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; 
+            transition: transform 0.3s ease;
+        }
+        .img-container-site:hover img { transform: scale(1.05); }
+
+        .badge-mdf      { background-color: #d63031; }
+        .badge-idf      { background-color: var(--accent); }
+        .badge-cubo     { background-color: var(--accent2); }
+        .badge-vertical { background-color: var(--purple); }
+
+        .switch-card {
+            border: 2px solid #dfe6e9; border-radius: 12px; padding: 13px 16px;
+            cursor: pointer; transition: 0.15s; background: white; margin-bottom: 10px;
+            user-select: none;
+        }
+        .switch-card:hover { border-color: var(--accent); background: #f0f7ff; transform: translateX(3px); }
+        .sw-ip   { font-family: monospace; font-size: 1rem; font-weight: 700; color: var(--accent); }
+        .sw-sub  { font-family: monospace; font-size: 0.8rem; color: #6c5ce7; font-weight: 600; }
+        .sw-count { font-size: 0.78rem; color: #636e72; }
+
+        .device-table thead { background: #2d3436; color: white; font-size: 0.8rem; }
+        .device-table td   { vertical-align: middle; font-size: 0.82rem; }
+        
+        /* Etiquetas para diferenciar Habitación / Área visualmente sin usar columna Tipo */
+        .ext-hab  { background: #fdcb6e; color: #2d3436; font-weight: 700; border-radius: 6px; padding: 2px 8px; font-size: 0.78rem; }
+        .ext-area { background: #dfe6e9; color: #2d3436; font-weight: 700; border-radius: 6px; padding: 2px 8px; font-size: 0.76rem; border: 1px solid #b2bec3; }
+        
+        .mac-code   { font-family: monospace; font-size: 0.74rem; color: #636e72; }
+        .port-badge { background: #00b894; color: white; border-radius: 4px; padding: 1px 7px; font-size: 0.74rem; font-family: monospace; }
+
+        .breadcrumb-bar {
+            background: #f8f9fa; border-radius: 8px; padding: 9px 14px; margin-bottom: 16px;
+            font-size: 0.8rem; color: #636e72; }
+        .breadcrumb-bar .sep  { margin: 0 6px; color: #b2bec3; }
+        .breadcrumb-bar .cur  { color: var(--accent); font-weight: 600; }
+        .breadcrumb-bar .lnk  { cursor: pointer; text-decoration: underline; }
+        .breadcrumb-bar .lnk:hover { color: var(--accent); }
+
+        .btn-back { background: #f1f3f6; border: 1px solid #dfe6e9; border-radius: 8px; padding: 5px 14px; font-size: 0.82rem; cursor: pointer; }
+        .btn-back:hover { background: #dfe6e9; }
+
+        .stats-pill {
+            background: white; border-radius: 10px; padding: 8px 18px;
+            display: inline-flex; align-items: center; gap: 7px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); font-size: 0.83rem;
+        }
+        .stats-pill .num { font-weight: 700; font-size: 1rem; color: var(--accent); }
+        .stats-pill.s-hab .num { color: #b7950b; }
+        .stats-pill.s-area .num { color: #1a6fb0; }
+
+        /* Filtros de V2 */
+        .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+        .ftab { border: 1px solid #dfe6e9; background: white; border-radius: 20px; padding: 3px 14px; font-size: 0.78rem; cursor: pointer; transition: 0.15s; }
+        .ftab i, .badge i, .section-title i, .empty-state .icon i { margin-right: 5px; }
+        .ftab:hover { border-color: var(--accent); }
+        .ftab.active          { background: #2d3436; color: white; border-color: #2d3436; }
+        .ftab.f-hab.active    { background: #b7950b; color: white; border-color: #b7950b; }
+        .ftab.f-area.active   { background: #1a6fb0; color: white; border-color: #1a6fb0; }
+        .ftab.ftab-mdf.active      { background: #d63031; border-color: #d63031; }
+        .ftab.ftab-idf.active      { background: var(--accent); border-color: var(--accent); }
+        .ftab.ftab-cubo.active     { background: var(--accent2); border-color: var(--accent2); }
+        .ftab.ftab-vertical.active { background: var(--purple); border-color: var(--purple); }
+        #typeTabs { margin-bottom: 14px; }
+
+        .matriz-table { font-size: 0.7rem; }
+        .matriz-table td { width: 40px; height: 28px; vertical-align: middle; }
+        .occupied { background-color: #ffeaa7 !important; font-weight: bold; color: #d63031; }
+
+        .empty-state { text-align: center; padding: 50px 20px; color: #b2bec3; }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 10px; }
+        .section-title { font-size: 0.9rem; font-weight: 700; border-bottom: 2px solid #f1f3f6; padding-bottom: 8px; margin-bottom: 14px; margin-top: 4px; }
+    </style>
+    <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<script src="datos.js"></script>
+<script>
+/* Respaldo: si no existe datos.js, intenta con datos_.js (nombre alterno) */
+if (typeof dataSites === 'undefined') {
+    document.write('<script src="datos_.js"><\/script>');
+}
+</script>
+
+<div class="sidebar">
+    <div class="brand"><i class="bi bi-telephone-inbound me-2"></i>Soporte de telefonia</div>
+    <div class="version">Sites Vidanta by T1 Daniel</div>
+    <input type="text" id="sideSearch" class="form-control form-control-sm mb-3"
+           placeholder="Filtrar grupos..." oninput="filterSidebar(this.value)"
+           style="background:#646464;border-color:#4a6278;color:rgb(0, 0, 0);font-size:0.8rem">
+    
+    <div class="nav-label">Grupos</div>
+    <div id="btnContainer">
+        <button class="nav-btn active" onclick="renderAll(this)"><i class="bi bi-globe2"></i> Ver Todo</button>
+    </div>
+    
+    <div class="nav-label" style="margin-top:18px">Herramientas</div>
+    <a href="editor.html" class="nav-btn" style="text-decoration:none"><i class="bi bi-pencil-square"></i> Editor de Datos</a>
+</div>
+
+<div class="main-content">
+    <div class="d-flex align-items-start justify-content-between mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold mb-1" id="pageTitle">Infraestructura de Sites</h2>
+            <p class="text-muted small mb-0">Búsqueda por IP, extensión, habitación o MAC.</p>
+        </div>
+        <div style="min-width:280px">
+            <div class="input-group shadow-sm">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="globalSearch" class="form-control"
+                       placeholder="Extensión, MAC, IP, Módulo..." oninput="smartSearch()">
+            </div>
+        </div>
+    </div>
+    <div class="filter-tabs" id="typeTabs"></div>
+    <div class="d-flex gap-3 mb-4 flex-wrap" id="statsBar"></div>
+    <div id="gridDisplay" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3"></div>
+</div>
+
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#1e272e;color:white;">
+                <h5 class="modal-title" id="mTitle">Detalle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="modalInner" style="padding:20px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+
+// ── ERROR VISIBLE (en vez de dejar la pantalla en blanco) ─────────────────
+function mostrarErrorDatos(titulo, detalle, contenedorId) {
+    const c = document.getElementById(contenedorId);
+    if (!c) return;
+    c.innerHTML = `<div class="col-12"><div class="alert alert-danger mb-0">
+        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>${titulo}</h5>
+        <div>${detalle}</div></div></div>`;
+}
+const MSG_NO_DATOS = 'No se cargó la variable <code>dataSites</code>. Verifica que el archivo <code>datos.js</code> ' +
+    'esté <b>en la misma carpeta</b> que este HTML y que se llame exactamente <code>datos.js</code> ' +
+    '(sin guion bajo, sin “(1)”). Presiona Ctrl+F5 después de corregirlo.';
+
+// ─── LOGIC HELPERS (From V2) ───────────────────────────────────────────────
+function isHabitacion(ext) {
+    if (!ext) return false;
+    const s = String(parseInt(ext));
+    if (s.length !== 5) return false;
+    return s[0] === '1' || ['72','76','30','33'].includes(s.slice(0,2));
+}
+function tipoTel(ext) { return isHabitacion(ext) ? 'habitacion' : 'area'; }
+
+// ─── TIPOS DE SITE (MDF / IDF / Cubo / Vertical) ───────────────────────────
+const TIPOS_SITE = [
+    { key: 'MDF',      label: 'MDF',                color: '#d63031' },
+    { key: 'IDF',      label: 'IDF',                color: '#0984e3' },
+    { key: 'Cubo',     label: 'Cubo de habitación',  color: '#00b894' },
+    { key: 'Vertical', label: 'Vertical',            color: '#6c5ce7' }
+];
+function tipoInfo(tipo) {
+    return TIPOS_SITE.find(t => t.key === tipo) || { key: tipo, label: tipo || '—', color: '#b2bec3' };
+}
+function tipoIconHTML(tipo, extraStyle) {
+    const info = tipoInfo(tipo);
+    return `<i class="bi bi-circle-fill" style="color:${info.color};font-size:0.55em;${extraStyle||''}"></i>`;
+}
+function tipoDe(site) { return site['Tipo de site'] || 'IDF'; }
+
+// ─── GLOBAL STATE ──────────────────────────────────────────────────────────
+let allData = [];
+const siteMap = {};
+let _uid = 0;
+let currentBaseList = [];
+let currentTypeFilter = 'all';
+const bsModal = new bootstrap.Modal(document.getElementById('detailModal'));
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+function init() {
+    Object.keys(dataSites).forEach(grupo => {
+        dataSites[grupo].forEach(site => {
+            site._group = grupo;
+            site._id = ++_uid;
+            siteMap[site._id] = site;
+            allData.push(site);
+        });
+    });
+
+    const btns = document.getElementById('btnContainer');
+    Object.keys(dataSites).forEach(grupo => {
+        const n = dataSites[grupo].length;
+        const btn = document.createElement('button');
+        btn.className = 'nav-btn';
+        btn.innerHTML = `<i class="bi bi-building"></i> ${grupo} <span class="badge bg-secondary">${n}</span>`;
+        btn.onclick = function() { filterBy(grupo, this); };
+        btns.appendChild(btn);
+    });
+
+    currentBaseList = allData;
+    applyTypeFilter();
+}
+
+// ─── FILTRO POR TIPO (MDF/IDF/Cubo/Vertical) ───────────────────────────────
+function renderTypeTabs() {
+    const wrap = document.getElementById('typeTabs');
+    if (!wrap) return;
+    wrap.style.display = 'flex';
+    const counts = { all: currentBaseList.length };
+    TIPOS_SITE.forEach(t => counts[t.key] = currentBaseList.filter(s => tipoDe(s) === t.key).length);
+
+    let html = `<button class="ftab ${currentTypeFilter==='all'?'active':''}" data-t="all"><i class="bi bi-grid"></i> Todos (${counts.all})</button>`;
+    TIPOS_SITE.forEach(t => {
+        html += `<button class="ftab ftab-${t.key.toLowerCase()} ${currentTypeFilter===t.key?'active':''}" data-t="${t.key}">${tipoIconHTML(t.key)} ${t.label} (${counts[t.key]})</button>`;
+    });
+    wrap.innerHTML = html;
+
+    wrap.querySelectorAll('.ftab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentTypeFilter = btn.dataset.t;
+            applyTypeFilter();
+        });
+    });
+}
+
+function applyTypeFilter() {
+    renderTypeTabs();
+    const list = currentTypeFilter === 'all' ? currentBaseList : currentBaseList.filter(s => tipoDe(s) === currentTypeFilter);
+    render(list);
+    updateStats(list);
+}
+
+// ─── RENDER SITE CARDS ─────────────────────────────────────────────────────
+function render(data) {
+    const grid = document.getElementById('gridDisplay');
+    grid.innerHTML = '';
+    if (!data.length) {
+        grid.innerHTML = '<div class="col-12"><div class="empty-state"><div class="icon"><i class="bi bi-search"></i></div><div>Sin resultados</div></div></div>';
+        return;
+    }
+    data.forEach(site => {
+        const info = tipoInfo(tipoDe(site));
+        const swN  = (site.switches || []).length;
+        
+        // Conteo con la regla: Habitaciones ÚNICAS, Áreas INDIVIDUALES
+        const allDevs = (site.switches || []).flatMap(sw => sw.dispositivos || []);
+        const habExts = new Set(allDevs.filter(d => (d.tipo_telefono || tipoTel(d.extension)) === 'habitacion').map(d => d.extension));
+        const habN = habExts.size;
+        const areaN = allDevs.filter(d => (d.tipo_telefono || tipoTel(d.extension)) === 'area').length;
+        const totalDispVisual = habN + areaN;
+
+        const col = document.createElement('div');
+        col.className = 'col';
+        col.innerHTML = `
+            <div class="card card-site h-100 shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge badge-${info.key.toLowerCase()}">${info.label}</span>
+                </div>
+                <h6 class="fw-bold mb-1">${site.Nombre}</h6>
+                <p class="small text-muted mb-2"><i class="bi bi-geo-alt"></i> ${site.Torre||site._group} · Nivel ${site["Piso / Nivel"]||'–'}</p>
+                ${swN > 0
+                    ? `<div class="d-flex gap-2 mt-auto flex-wrap">
+                         <span class="badge bg-light text-dark border"><i class="bi bi-diagram-3"></i> ${swN} mód.</span>
+                         <span class="badge bg-light text-dark border"><i class="bi bi-telephone"></i> ${totalDispVisual} disp.</span>
+                       </div>`
+                    : `<p class="small text-primary mb-0 mt-auto">Ver detalles →</p>`}
+            </div>`;
+        col.querySelector('.card-site').addEventListener('click', () => openSite(site._id));
+        grid.appendChild(col);
+    });
+}
+
+// ─── SMART SEARCH (From Index) ─────────────────────────────────────────────
+function smartSearch() {
+    const q = document.getElementById('globalSearch').value.toLowerCase().trim();
+    const grid = document.getElementById('gridDisplay');
+    
+    if (!q) {
+        applyTypeFilter();
+        document.getElementById('pageTitle').innerText = 'Infraestructura de Sites';
+        return;
+    }
+    document.getElementById('typeTabs').style.display = 'none';
+
+    let matchedDevices = [];
+    allData.forEach(site => {
+        (site.switches || []).forEach(sw => {
+            (sw.dispositivos || []).forEach(dev => {
+                const devString = JSON.stringify(dev).toLowerCase();
+                if (devString.includes(q)) {
+                    matchedDevices.push({
+                        ...dev,
+                        _siteName: site.Nombre,
+                        _siteId: site._id,
+                        _swIp: sw.ip,
+                        _modulo: sw.prefijo_puerto,
+                        _tipo: dev.tipo_telefono || tipoTel(dev.extension)
+                    });
+                }
+            });
+        });
+    });
+
+    if (matchedDevices.length > 0) {
+        document.getElementById('pageTitle').innerText = `Dispositivos encontrados: ${matchedDevices.length}`;
+        renderDeepResults(matchedDevices);
+    } else {
+        const filteredSites = allData.filter(s => JSON.stringify(s).toLowerCase().includes(q));
+        render(filteredSites);
+        document.getElementById('pageTitle').innerText = `Sites encontrados: "${q}"`;
+    }
+}
+
+function renderDeepResults(devices) {
+    const grid = document.getElementById('gridDisplay');
+    grid.innerHTML = `
+        <div class="col-12">
+            <div class="card shadow-sm p-3">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover device-table">
+                        <thead>
+                            <tr>
+                                <th>Site / Switch</th>
+                                <th>Piso</th>
+                                <th>Extensión</th>
+                                <th>Puerto</th>
+                                <th>Módulo</th>
+                                <th>Modelo</th>
+                                <th>Serie</th>
+                                <th>MACs</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deepTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+
+    const tbody = document.getElementById('deepTableBody');
+    devices.forEach(d => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = "pointer";
+        const isH = d._tipo === 'habitacion';
+        const badgeClass = isH ? 'ext-hab' : 'ext-area';
+        
+        tr.innerHTML = `
+            <td>
+                <div class="fw-bold text-primary">${d._siteName}</div>
+                <div class="small text-muted">${d._swIp}</div>
+            </td>
+            <td>${d.piso || '–'}</td>
+            <td><span class="${badgeClass}">${d.extension || '–'}</span></td>
+            <td><span class="port-badge">${d.puerto || '–'}</span></td>
+            <td>${d._modulo && d._modulo!=='–' ? `<code>${d._modulo}/x</code>` : '–'}</td>
+            <td>${d.modelo || '–'}</td>
+            <td class="mono">${d.serie || '–'}</td>
+            <td class="mac-code">
+                ${d.mac_avaya ? `<div>A: ${d.mac_avaya}</div>` : ''}
+                ${d.mac_cisco ? `<div>C: ${d.mac_cisco}</div>` : ''}
+            </td>
+        `;
+        tr.onclick = () => openSwitch(d._siteId, d._swIp);
+        tbody.appendChild(tr);
+    });
+}
+
+// ─── OPEN SITE (Images logic from Index) ───────────────────────────────────
+function openSite(siteId) {
+    const site = siteMap[siteId];
+    if (!site) return;
+    
+    const nombreArchivo = site.Imagen || "site-imagen.jpg";
+    const imagePath = `img-sites/${nombreArchivo}`; 
+
+    let html = `
+    <div class="breadcrumb-bar">
+        <i class="bi bi-globe2"></i> Sites <span class="sep">›</span> ${site.Torre||site._group}
+        <span class="sep">›</span> <span class="cur">${site.Nombre}</span>
+    </div>
+
+    <div class="img-container-site">
+        <img src="${imagePath}" 
+             alt="Imagen de ${site.Nombre}" 
+             onerror="this.src='https://via.placeholder.com/800x400?text=Imagen+No+Encontrada+en+Carpeta'">
+    </div>
+
+    <div class="row mb-4 g-3">
+        <div class="col-md-6">
+            <div class="p-3 rounded" style="background:#f8f9fa">
+                <div class="small text-muted mb-1">Ubicación exacta</div>
+                <div class="fw-semibold">${site["Ubicación exacta"]||'–'}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 rounded" style="background:#f8f9fa">
+                <div class="small text-muted mb-1">Tipo de llave</div>
+                <div class="fw-semibold">${site["Tipo de llave"]||'–'}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 rounded" style="background:#f8f9fa">
+                <div class="small text-muted mb-1">Equipos principales</div>
+                <div class="fw-semibold">${site["Equipos principales"]||'–'}</div>
+            </div>
+        </div>
+        ${site.Comentarios ? `
+        <div class="col-12">
+            <div class="p-3 rounded border-start border-3 border-warning" style="background:#fffbf0">
+                <div class="small text-muted mb-1"><i class="bi bi-exclamation-triangle"></i> Nota</div>
+                <div class="small">${site.Comentarios}</div>
+            </div>
+        </div>` : ''}
+    </div>`;
+
+    if (site["Tipo de site"] === "Vertical") html += buildMatriz(site);
+    if (site.EquiposDetalle?.length)         html += buildEquiposDetalle(site.EquiposDetalle);
+    if (site.switches?.length)               html += `<div id="switchListWrap"></div>`;
+    
+    const info = tipoInfo(tipoDe(site));
+    document.getElementById('mTitle').innerHTML = `${site.Nombre} <span class="badge badge-${info.key.toLowerCase()} ms-2" style="font-size:0.65rem">${info.label}</span>`;
+    const inner = document.getElementById('modalInner');
+    inner.innerHTML = html;
+    
+    if (site.switches?.length) renderSwitchCards(site);
+    bsModal.show();
+}
+
+function renderSwitchCards(site) {
+    const wrap = document.getElementById('switchListWrap');
+    if (!wrap) return;
+
+    const byIp = {};
+    (site.switches || []).forEach(sw => {
+        if (!byIp[sw.ip]) byIp[sw.ip] = [];
+        byIp[sw.ip].push(sw);
+    });
+
+    let html = `<div class="section-title"><i class="bi bi-diagram-3"></i> Switches del Site</div><div class="row g-2">`;
+    Object.entries(byIp).forEach(([ip, swList]) => {
+        const allDevs = swList.flatMap(sw => sw.dispositivos || []);
+        const allExts = [...new Set(allDevs.map(d => d.extension).filter(Boolean))];
+        const preview = allExts.slice(0,5).join(', ') + (allExts.length>5?` +${allExts.length-5}`:'');
+        const multiMod = swList.length > 1;
+        const modulos  = swList.map(sw => sw.prefijo_puerto+'/x').join(', ');
+        
+        html += `
+        <div class="col-md-6">
+            <div class="switch-card" data-site="${site._id}" data-ip="${ip}">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-hdd-network" style="font-size:1.4rem;margin-right:12px;color:var(--accent)"></i>
+                    <div class="flex-grow-1">
+                        <div class="sw-ip">${ip}</div>
+                        ${multiMod ? `<div class="sw-sub">Módulos: ${modulos}</div>` : ''}
+                        <div class="sw-count">${allDevs.length} dispositivo${allDevs.length!==1?'s':''} enlazados</div>
+                        ${preview ? `<div class="sw-count mt-1"><i class="bi bi-house"></i> ${preview}</div>` : ''}
+                    </div>
+                    <span style="font-size:1.3rem;color:#b2bec3">›</span>
+                </div>
+            </div>
+        </div>`;
+    });
+    html += `</div>`;
+    wrap.innerHTML = html;
+
+    wrap.querySelectorAll('.switch-card').forEach(card => {
+        card.addEventListener('click', () => openSwitch(parseInt(card.dataset.site), card.dataset.ip));
+    });
+}
+
+// ─── OPEN SWITCH (Logic combined: Filters from V2, no type column) ─────────
+function openSwitch(siteId, ip) {
+    const site = siteMap[siteId];
+    if (!site) return;
+
+    const allForIp = (site.switches || []).filter(sw => sw.ip === ip);
+    const allDevices = allForIp.flatMap(sw =>
+        (sw.dispositivos || []).map(d => ({ ...d, _modulo: sw.prefijo_puerto, _tipo: d.tipo_telefono || tipoTel(d.extension) }))
+    );
+
+    // Cálculos siguiendo la regla de negocio
+    const habExts = new Set(allDevices.filter(d => d._tipo === 'habitacion').map(d => d.extension));
+    const habN = habExts.size; 
+    const areaN = allDevices.filter(d => d._tipo === 'area').length; 
+    const multiMod = allForIp.length > 1;
+
+    document.getElementById('mTitle').innerText = `Switch: ${ip}`;
+    const inner = document.getElementById('modalInner');
+
+    inner.innerHTML = `
+    <div class="breadcrumb-bar">
+        <i class="bi bi-globe2"></i> Sites <span class="sep">›</span>
+        <span class="lnk" id="backToSite">${site.Nombre}</span>
+        <span class="sep">›</span> <span class="cur"><i class="bi bi-hdd-network"></i> ${ip}</span>
+    </div>
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <button class="btn-back" id="btnBackSite">← Volver al site</button>
+        <div class="stats-pill s-hab"><i class="bi bi-door-closed"></i> <span class="num">${habN}</span> hab.</div>
+        ${areaN ? `<div class="stats-pill s-area"><i class="bi bi-building"></i> <span class="num">${areaN}</span> áreas</div>` : ''}
+        ${multiMod ? `<div class="stats-pill"><i class="bi bi-folder2"></i> <span class="num">${allForIp.length}</span> módulos</div>` : ''}
+    </div>
+
+    <div class="filter-tabs" id="filterTabs">
+        <button class="ftab active" data-f="all">Todos (${allDevices.length})</button>
+        <button class="ftab f-hab" data-f="habitacion"><i class="bi bi-door-closed"></i> Solo Habitaciones</button>
+        ${areaN > 0 ? `<button class="ftab f-area" data-f="area"><i class="bi bi-building"></i> Solo Áreas</button>` : ''}
+    </div>
+
+    ${multiMod ? buildModuleTabs(allForIp) : ''}
+    
+    <div class="input-group mb-3" style="max-width:360px">
+        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+        <input type="text" id="swSearch" class="form-control" placeholder="Buscar extensión, MAC, puerto..." oninput="applyFilters()">
+    </div>
+    <div id="deviceTableWrap"></div>`;
+
+    let activeF = 'all', activeMod = 'all';
+
+    function applyFilters() {
+        let devs = allDevices;
+        if (activeF !== 'all') devs = devs.filter(d => d._tipo === activeF);
+        if (activeMod !== 'all') devs = devs.filter(d => d._modulo === activeMod);
+        const q = (document.getElementById('swSearch')?.value || '').toLowerCase();
+        if (q) devs = devs.filter(d => JSON.stringify(d).toLowerCase().includes(q));
+        document.getElementById('deviceTableWrap').innerHTML = buildDeviceTable(devs);
+    }
+    
+    window.applyFilters = applyFilters;
+    applyFilters(); // Initial render
+
+    document.getElementById('btnBackSite').addEventListener('click', () => openSite(siteId));
+    document.getElementById('backToSite').addEventListener('click', () => openSite(siteId));
+
+    // Listeners para Pestañas de Filtro (Tipo)
+    inner.querySelectorAll('.ftab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            inner.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeF = btn.dataset.f;
+            document.getElementById('swSearch').value = '';
+            applyFilters();
+        });
+    });
+
+    // Listeners para Pestañas de Módulos
+    if (multiMod) {
+        inner.querySelectorAll('.mod-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                inner.querySelectorAll('.mod-tab').forEach(b => { b.classList.remove('btn-dark'); b.classList.add('btn-outline-secondary'); });
+                btn.classList.remove('btn-outline-secondary'); btn.classList.add('btn-dark');
+                activeMod = btn.dataset.modulo;
+                document.getElementById('swSearch').value = '';
+                applyFilters();
+            });
+        });
+    }
+    
+    if (!bsModal._isShown) bsModal.show();
+}
+
+function buildModuleTabs(swList) {
+    let html = `<div class="d-flex gap-2 mb-3 flex-wrap">
+        <button class="btn btn-sm btn-dark mod-tab" data-modulo="all">Todos los Módulos</button>`;
+    swList.forEach(sw => {
+        html += `<button class="btn btn-sm btn-outline-secondary mod-tab" data-modulo="${sw.prefijo_puerto}">
+                     Módulo ${sw.prefijo_puerto}/x
+                     <span class="badge bg-secondary ms-1">${sw.dispositivos.length}</span>
+                 </button>`;
+    });
+    html += `</div>`;
+    return html;
+}
+
+function buildDeviceTable(dispositivos) {
+    if (!dispositivos.length)
+        return `<div class="empty-state"><div class="icon"><i class="bi bi-inbox"></i></div><div>Sin dispositivos para esta vista</div></div>`;
+
+    const sorted = [...dispositivos].sort((a,b) => (a.extension||0)-(b.extension||0));
+    
+    // Sin columna 'Tipo'
+    let html = `<div class="table-responsive"><table class="table table-sm table-hover device-table">
+    <thead><tr><th>Piso</th><th>Extensión</th><th>Puerto SW</th><th>Módulo</th><th>Modelo</th><th>Serie</th><th>MACs</th></tr></thead><tbody>`;
+
+    sorted.forEach(d => {
+        const isH = d._tipo === 'habitacion';
+        const badgeClass = isH ? 'ext-hab' : 'ext-area';
+        
+        html += `<tr>
+            <td>${d.piso||'–'}</td>
+            <td><span class="${badgeClass}">${d.extension||'–'}</span></td>
+            <td><span class="port-badge">${d.puerto||'–'}</span></td>
+            <td>${d._modulo && d._modulo!=='–' ? `<code>${d._modulo}/x</code>` : '–'}</td>
+            <td>${d.modelo || '–'}</td>
+            <td class="mono">${d.serie || '–'}</td>
+            <td class="mac-code">
+                ${d.mac_avaya ? `<div>A: ${d.mac_avaya}</div>` : ''}
+                ${d.mac_cisco ? `<div>C: ${d.mac_cisco}</div>` : ''}
+            </td>
+        </tr>`;
+    });
+    html += `</tbody></table></div>`;
+    return html;
+}
+
+// ─── MATRIX & EQUIPOS (From Index) ─────────────────────────────────────────
+function buildMatriz(site) {
+    let html = `<div class="section-title"><i class="bi bi-diagram-2"></i> Mapa de Conexión (Galletas)</div>
+    <div class="table-responsive"><table class="table table-bordered matriz-table text-center">
+    <thead class="table-dark"><tr><th>Fila</th>`;
+    for (let g=1; g<=9; g++) html += `<th>G${g}</th>`;
+    html += `</tr></thead><tbody>`;
+    for (let f=1; f<=10; f++) {
+        html += `<tr><td class="table-secondary fw-bold">${f}</td>`;
+        for (let g=1; g<=9; g++) {
+            const val = site.MatrizConexion?.['Galleta '+g]?.['Fila '+f] || '–';
+            html += `<td class="${val!=='–'?'occupied':''}">${val}</td>`;
+        }
+        html += `</tr>`;
+    }
+    html += `</tbody></table></div>`;
+    return html;
+}
+
+function buildEquiposDetalle(equipos) {
+    let html = `<div class="section-title"><i class="bi bi-gear"></i> Equipos Principales</div>
+    <div class="table-responsive"><table class="table table-sm table-hover">
+    <thead class="table-dark"><tr><th>Tipo</th><th>Marca/Modelo</th><th>Hostname</th><th>IP</th><th>Puerto</th><th>Serie / ID</th><th>Estado</th></tr></thead><tbody>`;
+    equipos.forEach(e => {
+        html += `<tr>
+            <td><span class="badge bg-secondary">${e.Tipo||'–'}</span></td>
+            <td class="small">${e.Marca||''} ${e.Modelo||''}</td>
+            <td class="fw-semibold">${e.Hostname||'–'}</td>
+            <td class="text-primary font-monospace small">${e.IP||'–'}</td>
+            <td class="font-monospace small">${e.Puerto||'–'}</td>
+            <td class="font-monospace small">${e.Serie||'–'}${e.ID?`<div class="text-muted">ID ${e.ID}</div>`:''}</td>
+            <td class="small ${e.Estado==='Activo'?'text-success':'text-secondary'}">${e.Estado||'–'}</td>
+        </tr>`;
+    });
+    html += `</tbody></table></div>`;
+    return html;
+}
+
+// ─── NAV HELPERS ───────────────────────────────────────────────────────────
+function renderAll(btn) {
+    document.getElementById('globalSearch').value = '';
+    document.getElementById('pageTitle').innerText = 'Infraestructura de Sites';
+    currentBaseList = allData; currentTypeFilter = 'all';
+    applyTypeFilter(); setActive(btn);
+}
+
+function filterBy(grupo, btn) {
+    document.getElementById('globalSearch').value = '';
+    document.getElementById('pageTitle').innerText = grupo;
+    currentBaseList = dataSites[grupo] || []; currentTypeFilter = 'all';
+    applyTypeFilter(); setActive(btn);
+}
+
+function setActive(btn) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
+
+function filterSidebar(q) {
+    document.querySelectorAll('#btnContainer .nav-btn').forEach(b => {
+        b.style.display = b.innerText.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+    });
+}
+
+function updateStats(data) {
+    const allDevs = data.flatMap(s => (s.switches || []).flatMap(sw => sw.dispositivos || []));
+    const swN = data.reduce((a,s) => a + (s.switches?.length||0), 0);
+    
+    const habExts = new Set(allDevs.filter(d => (d.tipo_telefono || tipoTel(d.extension)) === 'habitacion').map(d => d.extension));
+    const habN = habExts.size;
+    const areaN = allDevs.filter(d => (d.tipo_telefono || tipoTel(d.extension)) === 'area').length;
+
+    document.getElementById('statsBar').innerHTML = `
+        <div class="stats-pill"><i class="bi bi-building"></i> <span class="num">${data.length}</span> Sites</div>
+        <div class="stats-pill"><i class="bi bi-diagram-3"></i> <span class="num">${swN}</span> Switches</div>
+        <div class="stats-pill s-hab"><i class="bi bi-door-closed"></i> <span class="num">${habN}</span> Habitaciones</div>
+        ${areaN > 0 ? `<div class="stats-pill s-area"><i class="bi bi-building"></i> <span class="num">${areaN}</span> teléfonos de área</div>` : ''}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof dataSites === 'undefined') {
+        console.error('No se encontró la variable dataSites.');
+        mostrarErrorDatos('No se pudieron cargar los datos', MSG_NO_DATOS, 'gridDisplay');
+        return;
+    }
+    try { init(); }
+    catch (err) {
+        console.error(err);
+        mostrarErrorDatos('Error al iniciar el visor', 'Detalle: <code>' + String(err.message).replace(/</g,'&lt;') + '</code>', 'gridDisplay');
+    }
+});
+</script>
+</body>
+</html>
